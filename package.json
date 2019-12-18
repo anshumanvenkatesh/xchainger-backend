@@ -26,6 +26,8 @@
   },
   "homepage": "https://github.com/anshumanvenkatesh/xchainger-backend#readme",
   "dependencies": {
-    "@hapi/hapi": "^18.4.0"
+    "@hapi/hapi": "^18.4.0",
+    "bluebird": "^3.7.2",
+    "neo4j-driver": "^4.0.1"
   }
 }
