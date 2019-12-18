@@ -1,0 +1,27 @@
+{
+  "name": "xchainger-backend",
+  "version": "0.1.0",
+  "description": "Backend for the xchainger app",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anshumanvenkatesh/xchainger-backend.git"
+  },
+  "keywords": [
+    "graphDB",
+    "class",
+    "exchange",
+    "asu",
+    "heroku",
+    "SaaS"
+  ],
+  "author": "jgr0, vj",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anshumanvenkatesh/xchainger-backend/issues"
+  },
+  "homepage": "https://github.com/anshumanvenkatesh/xchainger-backend#readme"
+}
