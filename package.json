@@ -23,5 +23,8 @@
   "bugs": {
     "url": "https://github.com/anshumanvenkatesh/xchainger-backend/issues"
   },
-  "homepage": "https://github.com/anshumanvenkatesh/xchainger-backend#readme"
+  "homepage": "https://github.com/anshumanvenkatesh/xchainger-backend#readme",
+  "dependencies": {
+    "@hapi/hapi": "^18.4.0"
+  }
 }
