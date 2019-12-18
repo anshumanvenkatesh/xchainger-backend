@@ -4,7 +4,7 @@ const internal = require('./routes/internal')
 const init = async () => {
 
   const server = Hapi.server({
-    port: 1338,
+    port: process.env.PORT || 5000,
     host: 'localhost'
   });
   
