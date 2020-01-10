@@ -1,2 +1,4 @@
 node_modules
 .env
+aws_neo4j_setup.txt
+neo4j.pem
