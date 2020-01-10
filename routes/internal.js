@@ -42,7 +42,6 @@ const addUser = (session) => async (request, h) => {
   }
 }
 
-
 const ping = (request, h) => {
   console.log("User pinged -> Server woke up.");
   return {
@@ -121,6 +120,12 @@ const addUserSubject = driver => async (request, h) => {
   const {
     userDetails, subjectDetails, demand
   } = request.payload
+  if (userDetails.institution !== subjectDetails.institution) {
+    return {
+      code: 6000,
+      msg: "Institution mismatch between user and subject"
+    }
+  }
   const results = await dbUtils.addUserSubject(driver)(userDetails, subjectDetails, demand)
   return {
     code: 2000,
@@ -128,17 +133,23 @@ const addUserSubject = driver => async (request, h) => {
   }
 }
 
+
 const removeUserSubject = driver => async (request, h) => {
   const {
     userDetails, subjectDetails, demand
   } = request.payload
+  if (userDetails.institution !== subjectDetails.institution) {
+    return {
+      code: 6000,
+      msg: "Institution mismatch between user and subject"
+    }
+  }
   const results = await dbUtils.removeUserSubject(driver)(userDetails, subjectDetails, demand)
   return {
     code: 2000,
     msg: results
   }
 }
-
 
 module.exports = {
   homeHandler,

@@ -91,13 +91,15 @@ const modifyUserSubject = modification => driver => async (userDetails, subjectD
     const session = driver.session()
     const relation = (
       demand === "has" ?
-      `(u)-[:CONNECTS]->(s)` :
-      `(u)<-[:CONNECTS]-(s)`
+      `(u)-[r:CONNECTS]->(s)` :
+      `(u)<-[r:CONNECTS]-(s)`
     )
     const query = `
-      MATCH ${userNodePattern(userDetails)}, ${subjectNodePattern(subjectDetails)} 
-      ${modification} ${relation}
-      RETURN u, s
+      MATCH ${userNodePattern(userDetails)}, ${subjectNodePattern(subjectDetails)}
+      ${modification === "DELETE" ? 
+        `MATCH ${relation} DELETE r`: 
+        `CREATE ${relation} RETURN u, s`
+      }
     `
     console.log("complex query: ", query, "\n\n");
     
