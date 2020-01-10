@@ -71,7 +71,8 @@ const getUserInfo = driver => async userEmail => {
   `)
 }
 
-const addUserSubject = driver => async (userDetails, subjectDetails, demand) => {
+
+const modifyUserSubject = modification => driver => async (userDetails, subjectDetails, demand) => {
   const _userExists = await userExists(driver)(userDetails)
   const _subjectExists = await subjectExists(driver)(subjectDetails)
   if (!_userExists) {
@@ -94,7 +95,9 @@ const addUserSubject = driver => async (userDetails, subjectDetails, demand) => 
       `(u)<-[:CONNECTS]-(s)`
     )
     const query = `
-      MATCH ${userNodePattern(userDetails)}, ${subjectNodePattern(subjectDetails)} CREATE ${relation} RETURN u, s
+      MATCH ${userNodePattern(userDetails)}, ${subjectNodePattern(subjectDetails)} 
+      ${modification} ${relation}
+      RETURN u, s
     `
     console.log("complex query: ", query, "\n\n");
     
@@ -110,6 +113,9 @@ const addUserSubject = driver => async (userDetails, subjectDetails, demand) => 
       })
   }
 }
+
+const addUserSubject = modifyUserSubject("CREATE")
+const removeUserSubject = modifyUserSubject("DELETE")
 
 const subjectExists = driver => async subjectDetails => {
   console.log("In subjectExists, subjectDetails: ", subjectDetails.id);
@@ -175,4 +181,5 @@ module.exports = {
   userExists,
   subjectExists,
   addUserSubject,
+  removeUserSubject
 }

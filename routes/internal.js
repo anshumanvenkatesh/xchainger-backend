@@ -128,6 +128,17 @@ const addUserSubject = driver => async (request, h) => {
   }
 }
 
+const removeUserSubject = driver => async (request, h) => {
+  const {
+    userDetails, subjectDetails, demand
+  } = request.payload
+  const results = await dbUtils.removeUserSubject(driver)(userDetails, subjectDetails, demand)
+  return {
+    code: 2000,
+    msg: results
+  }
+}
+
 
 module.exports = {
   homeHandler,
@@ -135,5 +146,6 @@ module.exports = {
   addUser,
   restricted,
   login,
-  addUserSubject
+  addUserSubject,
+  removeUserSubject,
 }

@@ -1,20 +1,15 @@
 const Hapi = require('@hapi/hapi');
 const Bell = require('@hapi/bell');
 const jwt = require('jsonwebtoken');
-
-
+var neo4j = require('neo4j-driver');
+require('dotenv').config();
 
 const internal = require('./routes/internal')
-
-var neo4j = require('neo4j-driver');
 var dbutils = require('./utils/dbutils')
 
-var oAuthHandler = require("./googleOAuthHandler")
-
-require('dotenv').config();
-var graphenedbURL = process.env.GRAPHENEDB_BOLT_URL;
-var graphenedbUser = process.env.GRAPHENEDB_BOLT_USER;
-var graphenedbPass = process.env.GRAPHENEDB_BOLT_PASSWORD;
+const graphenedbURL = process.env.GRAPHENEDB_BOLT_URL;
+const graphenedbUser = process.env.GRAPHENEDB_BOLT_USER;
+const graphenedbPass = process.env.GRAPHENEDB_BOLT_PASSWORD;
 
 const {
   GOOGLE_CLIENT_ID,
@@ -59,6 +54,15 @@ const registerRoutes = async (server, session, driver) => {
     options: {
       // auth: 'jwt',
       handler: internal.addUserSubject(driver)
+    }
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/removeUserSubject',
+    options: {
+      // auth: 'jwt',
+      handler: internal.removeUserSubject(driver)
     }
   });
 
