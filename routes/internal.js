@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const URLs = require("../utils/URLs")
+const URLs = require('../utils/URLs')
 const dbUtils = require('../utils/dbutils')
 const codes = require('../utils/codes')
 
@@ -9,15 +9,27 @@ const homeHandler = (session) => (request, h) => {
 
 const addUser = driver => async (request, h) => {
   const userDetails = request.payload
+  console.log("Going to add user: ", user);
   const results = await dbUtils.addUser(driver)(userDetails)
   return results
 }
 
 const removeUser = driver => async (request, h) => {
   const user = request.params
-  console.log("user: ", user);
-  
+  console.log("Going to remove user: ", user);
   const results = await dbUtils.removeUser(driver)(user)
+  return results
+}
+
+const addSubject = driver => async (request, h) => {
+  const subjectDetails = request.payload
+  const results = await dbUtils.addSubject(driver)(subjectDetails)
+  return results
+}
+
+const removeSubject = driver => async (request, h) => {
+  const subjectDetails = request.payload
+  const results = await dbUtils.removeSubject(driver)(subjectDetails)
   return results
 }
 
@@ -62,6 +74,8 @@ module.exports = {
   homeHandler,
   addUser,
   removeUser,
+  addSubject,
+  removeSubject,
   updateUser,
   addUserSubject,
   removeUserSubject,

@@ -60,6 +60,33 @@ const registerRoutes = async (server, session, driver) => {
     }
   });
 
+  // server.route({
+  //   method: 'GET',
+  //   path: '/internal/subjects',
+  //   options: {
+  //     // auth: 'jwt',
+  //     handler: internal.getSubjects(driver)
+  //   }
+  // });
+
+  server.route({
+    method: 'PUT',
+    path: '/internal/subjects',
+    options: {
+      // auth: 'jwt',
+      handler: internal.addSubject(driver)
+    }
+  });
+
+  server.route({
+    method: 'DELETE',
+    path: '/internal/subjects',
+    options: {
+      // auth: 'jwt',
+      handler: internal.removeSubject(driver)
+    }
+  });
+
   server.route({
     method: 'GET',
     path: '/restricted',
@@ -84,6 +111,15 @@ const registerRoutes = async (server, session, driver) => {
     options: {
       auth: 'jwt',
       handler: external.removeUserSubject(driver)
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/recos',
+    options: {
+      auth: 'jwt',
+      handler: external.getRecos(driver)
     }
   });
 

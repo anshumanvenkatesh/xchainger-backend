@@ -51,6 +51,7 @@ const addUser = (driver) => async userDetails => {
   if (_userExists) {
     return codes.userAlreadyExist
   }
+  // const user = {}
   const session = driver.session()
   return session
     .run(`CREATE (a:User {
@@ -86,14 +87,46 @@ const removeUser = (driver) => async userDetails => {
       console.error("Error while removing user")
       console.error(err)
     })
-  
 }
 
-const updateUser = (driver) => async (user, userDetails) => {
-  const _userExists = await userExists(driver)(user)
-  if (!_userExists) {
-    return addUser(userDetails)
+const addSubject = driver => async subject => {
+  const _userExists = await subjectExists(driver)(subjectDetails)
+  if (_userExists) {
+    return codes.userAlreadyExist
   }
+  const session = driver.session()
+  return session.run(`
+    CREATE (s:Subject {
+      id: ${subject.id},
+      name: ${subject.name},
+      session: ${subject.session},
+      institution: ${subject.institution}
+    })
+  `)
+  .then(results => {
+    console.log("results: ", results)
+    console.log("Subject added succesfully");
+    return codes.all_ok
+  })
+  .catch(err => {
+    console.error("Error while creating subject: ", err);
+  })
+}
+
+const removeSubject = (driver) => async subject => {
+  const session = driver.session()
+  return session
+    .run(`
+      MATCH ${subjectNodePattern(subject)} DETACH DELETE u
+    `)
+    .then(results => {
+      console.log("results for deleting user: ", results);
+      return codes.all_ok
+    })
+    .catch(err => {
+      console.error("Error while removing subject")
+      console.error(err)
+    })
 }
 
 const getUserInfo = driver => async userEmail => {
@@ -276,8 +309,10 @@ const processRecoResults = (results) => {
 module.exports = {
   initDB,
   addUser,
-  getRecos,
   removeUser,
+  addSubject,
+  removeSubject,
+  getRecos,
   userExists,
   subjectExists,
   addUserSubject,

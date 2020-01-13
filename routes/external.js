@@ -1,5 +1,7 @@
 const dbUtils = require('../utils/dbutils')
 const jwt = require('jsonwebtoken')
+const codes = require('../utils/codes')
+const utils = require('../utils/misc')
 
 const ping = (request, h) => {
   console.log("User pinged -> Server woke up.");
@@ -21,6 +23,10 @@ const login = driver => async (request, h) => {
   // the initial request are passed back via request.auth.credentials.query.
   
   const rawData = request.auth.credentials.profile.raw
+
+  if (!utils.isValidInstitution(rawData.hd)) {
+    return codes.invalidInstitution
+  }
 
   const data = {
     email: rawData.email,
@@ -65,16 +71,10 @@ const addUserSubject = driver => async (request, h) => {
     subjectDetails, demand
   } = request.payload
   if (userDetails.institution !== subjectDetails.institution) {
-    return {
-      code: 6000,
-      msg: "Institution mismatch between user and subject"
-    }
+    return codes.institutionMismatch
   }
   const results = await dbUtils.addUserSubject(driver)(userDetails, subjectDetails, demand)
-  return {
-    code: 2000,
-    msg: results
-  }
+  return codes.all_ok
 }
 
 const removeUserSubject = driver => async (request, h) => {
@@ -100,6 +100,16 @@ const removeUserSubject = driver => async (request, h) => {
   }
 }
 
+const getRecos = driver => async (request, h) => {
+  const decoded = jwt.verify(request.headers.authorization, process.env.JWT_SECRET)
+  console.log("header: ", decoded);
+  // const user = {
+  //   email: decoded.email,
+  //   institution: decoded.hd,
+  // }
+  return dbUtils.getRecos(driver)(decoded.email)
+}
+
 const restricted = (request, h) => {
   console.log("restricted route");
   return {
@@ -114,5 +124,6 @@ module.exports = {
   login,
   addUserSubject,
   removeUserSubject,
+  getRecos,
   restricted
 }
