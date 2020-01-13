@@ -1,5 +1,7 @@
 const Promise = require('bluebird')
 const URLs = require("../utils/URLs")
+const codes = require("../utils/codes")
+const R = require('ramda')
 
 
 const addConstraints = (session, constraints) => {
@@ -45,10 +47,14 @@ const initDB = (session) => {
 }
 
 const addUser = (driver) => async userDetails => {
+  const _userExists = await userExists(driver)(userDetails)
+  if (_userExists) {
+    return codes.userAlreadyExist
+  }
   const session = driver.session()
   return session
     .run(`CREATE (a:User {
-      email: "${userDetails.name}",
+      email: "${userDetails.email}",
       name: "${userDetails.name}",
       firstName: "${userDetails.firstName}",
       lastName: "${userDetails.lastName}",
@@ -58,11 +64,37 @@ const addUser = (driver) => async userDetails => {
     .then(results => {
       console.log("results: ", results)
       console.log("User added succesfully");
+      return codes.all_ok
     })
     .catch(err => {
       console.error("Error while creating user: ", err);
     })
 };
+
+const removeUser = (driver) => async userDetails => {
+  const session = driver.session()
+  return session
+    .run(`
+      MATCH ${userNodePattern(userDetails)} DETACH DELETE u
+    `)
+    .then(results => {
+      console.log("results for deleting user: ", results);
+      
+      return codes.all_ok
+    })
+    .catch(err => {
+      console.error("Error while removing user")
+      console.error(err)
+    })
+  
+}
+
+const updateUser = (driver) => async (user, userDetails) => {
+  const _userExists = await userExists(driver)(user)
+  if (!_userExists) {
+    return addUser(userDetails)
+  }
+}
 
 const getUserInfo = driver => async userEmail => {
   const sesssion = driver.session()
@@ -77,16 +109,10 @@ const modifyUserSubject = modification => driver => async (userDetails, subjectD
   const _subjectExists = await subjectExists(driver)(subjectDetails)
   if (!_userExists) {
     console.error("User does not exist")
-    return {
-      code: 5001,
-      msg: "User does not exist. Please create account"
-    }
+    return codes.userNotExist
   } else if (!_subjectExists) {
     console.error("Subject does not exist")
-    return {
-      code: 5001,
-      msg: "Subject does not exist. Please mail support team to add subject"
-    }
+    return codes.subjectNotExist
   } else { // User and Subject exist
     const session = driver.session()
     const relation = (
@@ -136,8 +162,10 @@ const subjectExists = driver => async subjectDetails => {
 }
 
 const userExists = (driver) => async (userDetails) => {
+  console.log("userDetails: ", userDetails);
+  const { email } = userDetails
   const session = driver.session()
-  return session.run(`MATCH ${userNodePattern(userDetails)} RETURN u`)
+  return session.run(`MATCH ${userNodePattern(email)} RETURN u`)
     .then(results => {
       console.log("user exists: ", results.records);
       return (results.records.length !== 0)
@@ -177,9 +205,79 @@ const subjectNodePattern = (subjectDetails) => `(s:Subject {
   name: "${subjectDetails.name}"
 })`
 
+const getRecos = (driver) => async (userDetails) => {
+  // const recoGetter = getReco(driver)(userDetails)
+  const recoGetter = getReco(driver)("a@asu.edu", "Spring 2020")
+  return Promise.all([
+    recoGetter(oneHopReco),
+    recoGetter(twoHopReco),
+    recoGetter(threeHopReco),
+  ])
+  .then(results => ({
+    oneHop: results[0],
+    twoHop: results[1],
+    threeHop: results[2],
+  }))
+  .catch(err => {
+    console.error("Error while processing recos:")
+    console.error(err)
+  })
+  // return {
+  //   oneHop: await recoGetter(oneHopReco),
+  //   twoHop: await recoGetter(twoHopReco),
+  //   threeHop: await recoGetter(threeHopReco),
+  // }
+}
+
+const getReco = (driver) => (user, courseSession) => async fn => {
+  const session = driver.session()
+  return session
+    .run(fn(user, courseSession))
+    .then(processRecoResults)
+    .catch(err => {
+      console.error("Error while getting Recos")
+      console.error(err)
+    })
+}
+
+const oneHopReco = (user, session) => `
+  MATCH (u1: User {email: "${user}"})-->(s1:Subject {session: "${session}"})-->
+        (u2)-->(s2:Subject {session: "${session}"})-->
+        (u1) 
+  RETURN u1, s1, u2, s2
+`
+
+const twoHopReco = (user, session) => `
+  MATCH (u1:User {email:"${user}"})-->(s1:Subject {session: "${session}"})-->
+        (u2)-->(s2:Subject {session: "${session}"})-->
+        (u3)-->(s3:Subject {session: "${session}"})-->
+        (u1) 
+  RETURN u1, s1, u2, s2, u3, s3
+`
+
+const threeHopReco = (user, session) => `
+  MATCH (u1:User {email:"${user}"})-->(s1:Subject {session: "${session}"})-->
+        (u2)-->(s2:Subject {session: "${session}"})-->
+        (u3)-->(s3:Subject {session: "${session}"})-->
+        (u4)-->(s4:Subject {session: "${session}"})-->
+        (u1) 
+  RETURN u1, s1, u2, s2, u3, s3, u4, s4
+`
+
+const processRecoResults = (results) => {
+  results = R.pipe(
+    R.map(R.path(["_fields"])),
+    R.map(R.map(R.prop("properties")))
+  )(results.records)
+  console.log(results);
+  return results
+}
+
 module.exports = {
   initDB,
   addUser,
+  getRecos,
+  removeUser,
   userExists,
   subjectExists,
   addUserSubject,

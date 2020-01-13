@@ -5,6 +5,7 @@ var neo4j = require('neo4j-driver');
 require('dotenv').config();
 
 const internal = require('./routes/internal')
+const external = require('./routes/external')
 var dbutils = require('./utils/dbutils')
 
 const graphenedbURL = process.env.GRAPHENEDB_BOLT_URL;
@@ -19,7 +20,6 @@ const {
 
 // console.log("BOLT URL: ", process.env);
 
-
 const registerRoutes = async (server, session, driver) => {
   server.route({
     method: 'GET',
@@ -30,13 +30,34 @@ const registerRoutes = async (server, session, driver) => {
   server.route({
     method: 'GET',
     path: '/ping',
-    handler: internal.ping
+    handler: external.ping
   });
 
   server.route({
     method: 'PUT',
-    path: '/users',
-    handler: internal.addUser(session)
+    path: '/internal/users/{email}',
+    options: {
+      // auth: 'jwt',
+      handler: internal.addUser(driver)
+    }
+  });
+
+  server.route({
+    method: 'DELETE',
+    path: '/internal/users/{email}',
+    options: {
+      // auth: 'jwt',
+      handler: internal.removeUser(driver)
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/internal/testreco',
+    options: {
+      // auth: 'jwt',
+      handler: internal.testReco(driver)
+    }
   });
 
   server.route({
@@ -44,7 +65,7 @@ const registerRoutes = async (server, session, driver) => {
     path: '/restricted',
     options: {
       auth: 'jwt',
-      handler: internal.restricted
+      handler: external.restricted
     }
   });
 
@@ -52,8 +73,8 @@ const registerRoutes = async (server, session, driver) => {
     method: 'POST',
     path: '/addUserSubject',
     options: {
-      // auth: 'jwt',
-      handler: internal.addUserSubject(driver)
+      auth: 'jwt',
+      handler: external.addUserSubject(driver)
     }
   });
 
@@ -61,8 +82,8 @@ const registerRoutes = async (server, session, driver) => {
     method: 'POST',
     path: '/removeUserSubject',
     options: {
-      // auth: 'jwt',
-      handler: internal.removeUserSubject(driver)
+      auth: 'jwt',
+      handler: external.removeUserSubject(driver)
     }
   });
 
@@ -71,11 +92,12 @@ const registerRoutes = async (server, session, driver) => {
     path: '/login', // The callback endpoint registered with the provider
     options: {
       auth: 'google',
-      handler: internal.login(driver)
+      handler: external.login(driver)
     }
   })
 }
 
+// @TODO
 const registerAuthServices = async (server) => {
 
 }
@@ -104,7 +126,7 @@ const init = async () => {
   server.auth.strategy('jwt', 'jwt', { 
     key: process.env.JWT_SECRET, // Never Share your secret key
     validate: async (decoded, request, h) => {
-      console.log("decoded: ", decoded);
+      console.log("decoded in Bell validate: ", decoded);
       // console.log("decoded: ", decoded);
       return {
         isValid: true
