@@ -7,6 +7,7 @@ require('dotenv').config();
 const internal = require('./routes/internal')
 const external = require('./routes/external')
 var dbutils = require('./utils/dbutils')
+var utils = require('./utils/misc')
 
 const graphenedbURL = process.env.GRAPHENEDB_BOLT_URL;
 const graphenedbUser = process.env.GRAPHENEDB_BOLT_USER;
@@ -30,7 +31,10 @@ const registerRoutes = async (server, session, driver) => {
   server.route({
     method: 'GET',
     path: '/ping',
-    handler: external.ping
+    options: {
+      auth: 'jwt',
+      handler: external.ping
+    }
   });
 
   server.route({
@@ -97,6 +101,15 @@ const registerRoutes = async (server, session, driver) => {
   });
 
   server.route({
+    method: 'DELETE',
+    path: '/users'  ,
+    options: {
+      auth: 'jwt',
+      handler: external.removeUser
+    }
+  });
+
+  server.route({
     method: 'POST',
     path: '/addUserSubject',
     options: {
@@ -145,6 +158,9 @@ const init = async () => {
 
   const server = Hapi.server({
     port: process.env.PORT || 5000,
+    routes: {
+      cors: true
+    }
     // host: 'localhost'
   });
 
@@ -159,13 +175,13 @@ const init = async () => {
     isSecure: false // Terrible idea but required if not using HTTPS especially if developing locally
   });
 
-  server.auth.strategy('jwt', 'jwt', { 
+  server.auth.strategy('jwt', 'jwt', {
     key: process.env.JWT_SECRET, // Never Share your secret key
     validate: async (decoded, request, h) => {
       console.log("decoded in Bell validate: ", decoded);
-      // console.log("decoded: ", decoded);
+      const isValid = utils.isValidUser(decoded.msg)
       return {
-        isValid: true
+        isValid
       }
       
     },  // validate function defined above
