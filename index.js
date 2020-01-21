@@ -146,12 +146,6 @@ const registerRoutes = async (server, session, driver) => {
   })
 }
 
-// @TODO
-const registerAuthServices = async (server) => {
-
-}
-
-
 const init = async () => {
   var driver = await neo4j.driver(graphenedbURL, neo4j.auth.basic(graphenedbUser, graphenedbPass));
   var session = await driver.session();
@@ -176,18 +170,29 @@ const init = async () => {
   });
 
   server.auth.strategy('jwt', 'jwt', {
-    key: process.env.JWT_SECRET, // Never Share your secret key
-    validate: async (decoded, request, h) => {
-      console.log("decoded in Bell validate: ", decoded);
-      const isValid = utils.isValidUser(decoded.msg)
-      return {
-        isValid
+    // key: process.env.JWT_SECRET, // Never Share your secret key
+    verify: async (decoded, request) => { 
+      const token = request.headers.authorization
+      const _isValidUser = await utils.isValidUser(token)
+      if (_isValidUser) {
+        return {isValid: true, credentials: "try"}
       }
+      return {
+        isValid: false,
+        credentials: "try"
+      }
+    },
+    // validate: async (decoded, request, h) => {
+    //   console.log("decoded in Bell validate: ", decoded);
+    //   const isValid = utils.isValidUser(decoded.msg)
+    //   return {
+    //     isValid
+    //   }
       
-    },  // validate function defined above
-    headless: {
-      alg: "HS256",
-      typ: "JWT"
+    // },  // validate function defined above
+    verifyOptions: {
+      algorithms: ["RS256"],
+      ignoreExpiration: true
     }
   });
 
@@ -209,8 +214,6 @@ const init = async () => {
 
 
     })
-  // await session.run('CREATE (a:Person {name: "TEST NAME"}) RETURN a')
-  // console.log("user inserted");
 
 };
 
