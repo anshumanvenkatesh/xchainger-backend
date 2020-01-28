@@ -7,67 +7,67 @@ const homeHandler = (session) => (request, h) => {
   return "API docs comin up";
 }
 
-const addUser = driver => async (request, h) => {
+const addUser = async (request, h) => {
   const userDetails = request.payload
   console.log("Going to add user: ", user);
-  const results = await dbUtils.addUser(driver)(userDetails)
+  const results = await dbUtils.addUser(request.server.app.driver)(userDetails)
   return results
 }
 
-const removeUser = driver => async (request, h) => {
+const removeUser = async (request, h) => {
   const user = request.params
   console.log("Going to remove user: ", user);
-  const results = await dbUtils.removeUser(driver)(user)
+  const results = await dbUtils.removeUser(request.server.app.driver)(user)
   return results
 }
 
-const addSubject = driver => async (request, h) => {
+const addSubject = async (request, h) => {
   const subjectDetails = request.payload
-  const results = await dbUtils.addSubject(driver)(subjectDetails)
+  const results = await dbUtils.addSubject(request.server.app.driver)(subjectDetails)
   return results
 }
 
-const removeSubject = driver => async (request, h) => {
+const removeSubject = async (request, h) => {
   const subjectDetails = request.payload
-  const results = await dbUtils.removeSubject(driver)(subjectDetails)
+  const results = await dbUtils.removeSubject(request.server.app.driver)(subjectDetails)
   return results
 }
 
-const updateUser = driver => async (request, h) => {
+const updateUser = async (request, h) => {
   const user = request.params
   console.log("user: ", user);
   const userDetails = request.payload.userDetails
   console.log("userDetails: ", userDetails);
   
-  // const results = await dbUtils.removeUser(driver)(user)
+  // const results = await dbUtils.removeUser(request.server.app.driver)(user)
   // return results
   return "debugging route"
 }
 
-const addUserSubject = driver => async (request, h) => {
+const addUserSubject = async (request, h) => {
   const {
     userDetails, subjectDetails, demand
   } = request.payload
   if (userDetails.institution !== subjectDetails.institution) {
     return codes.institutionMismatch
   }
-  const results = await dbUtils.addUserSubject(driver)(userDetails, subjectDetails, demand)
+  const results = await dbUtils.addUserSubject(request.server.app.driver)(userDetails, subjectDetails, demand)
   return codes.all_ok
 }
 
-const removeUserSubject = driver => async (request, h) => {
+const removeUserSubject = async (request, h) => {
   const {
     userDetails, subjectDetails, demand
   } = request.payload
   if (userDetails.institution !== subjectDetails.institution) {
     return codes.institutionMismatch
   }
-  const results = await dbUtils.removeUserSubject(driver)(userDetails, subjectDetails, demand)
+  const results = await dbUtils.removeUserSubject(request.server.app.driver)(userDetails, subjectDetails, demand)
   return codes.all_ok
 }
 
-const testReco = driver => async (request, h) => {
-  return dbUtils.getRecos(driver)("foo")
+const testReco = async (request, h) => {
+  return dbUtils.getRecos(request.server.app.driver)("foo")
 }
 
 module.exports = {

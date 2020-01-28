@@ -129,24 +129,29 @@ const removeSubject = (driver) => async subject => {
     })
 }
 
-const getUserInfo = driver => async userEmail => {
-  const sesssion = driver.session()
-  return session.run(`
-    MATCH (u:User {email: "${userEmail}"})
-  `)
+const getUserSubjects = driver => async userEmail => {
+  const queries = [
+    `MATCH (u:User {email: "${userEmail}"})-[r]->(s:Subject) RETURN s`,
+    `MATCH (u:User {email: "${userEmail}"})<-[r]-(s:Subject) RETURN s`,
+  ]
+  return Promise.map(queries, query => {
+    const session = driver.session()
+    return session.run(query)
+  })
+    .then(results => ({
+      has: results[0].records.map(s => s._fields[0].properties),
+      wants: results[1].records.map(s => s._fields[0].properties),
+    }))
+    .catch(err => {
+      console.error(`Error while getting user subjects for ${userEmail}`)
+      console.error(err)
+    })
+  // return session.run()
 }
 
 
 const modifyUserSubject = modification => driver => async (userDetails, subjectDetails, demand) => {
-  const _userExists = await userExists(driver)(userDetails)
-  const _subjectExists = await subjectExists(driver)(subjectDetails)
-  if (!_userExists) {
-    console.error("User does not exist")
-    return codes.userNotExist
-  } else if (!_subjectExists) {
-    console.error("Subject does not exist")
-    return codes.subjectNotExist
-  } else { // User and Subject exist
+   // User and Subject exist ensured by pre checks
     const session = driver.session()
     const relation = (
       demand === "has" ?
@@ -165,14 +170,15 @@ const modifyUserSubject = modification => driver => async (userDetails, subjectD
     return session.run(query)
       .then(results => {
         console.log("after adding connection: ", results);
-
+        return codes.all_ok
       })
       .catch(err => {
         console.error(`Error while adding connection from User ${userDetails.email} to Subject: ${subjectDetails}`)
         console.error(err)
-        throw err
+        return err
+        // throw err
       })
-  }
+  
 }
 
 const addUserSubject = modifyUserSubject("CREATE")
@@ -211,14 +217,19 @@ const userExists = (driver) => async (userDetails) => {
 const userRelationSubject = relation => driver => async (user, subject) => {
   const session = driver.session()
   const query = `
-    MATCH ${userNodePattern(user)}, ${subjectNodePattern(subject)} 
-    WHERE (u)${relation}(s)
+    MATCH ${userNodePattern(user)}${relation}${subjectNodePattern(subject)} 
     RETURN u, s
   `
+  console.log("\n--------\n\nquery: ", query, "\n\n");
+  
   return session.run(query)
-    .then(results => results.records.length !== 0)
+    .then(results => {
+      console.log("\n\nresults from userRelationSubject#######################: ", query, "\n\n");
+      
+      return results.records.length !== 0
+    })
     .catch(err => {
-      console.error(`Error while checking if ${user.email} wants ${subject.name}`)
+      console.error(`Error while checking if ${user.email} ${relation} ${subject.name}`)
       console.error(err)
     })
 }
@@ -273,29 +284,29 @@ const getReco = (driver) => (user, courseSession) => async fn => {
     })
 }
 
-const oneHopReco = (user, session) => `
+const oneHopReco = (user, session) => (`
   MATCH (u1: User {email: "${user}"})-->(s1:Subject {session: "${session}"})-->
         (u2)-->(s2:Subject {session: "${session}"})-->
         (u1) 
   RETURN u1, s1, u2, s2
-`
+`)
 
-const twoHopReco = (user, session) => `
+const twoHopReco = (user, session) => (`
   MATCH (u1:User {email:"${user}"})-->(s1:Subject {session: "${session}"})-->
         (u2)-->(s2:Subject {session: "${session}"})-->
         (u3)-->(s3:Subject {session: "${session}"})-->
         (u1) 
   RETURN u1, s1, u2, s2, u3, s3
-`
+`)
 
-const threeHopReco = (user, session) => `
+const threeHopReco = (user, session) => (`
   MATCH (u1:User {email:"${user}"})-->(s1:Subject {session: "${session}"})-->
         (u2)-->(s2:Subject {session: "${session}"})-->
         (u3)-->(s3:Subject {session: "${session}"})-->
         (u4)-->(s4:Subject {session: "${session}"})-->
         (u1) 
   RETURN u1, s1, u2, s2, u3, s3, u4, s4
-`
+`)
 
 const processRecoResults = (results) => {
   results = R.pipe(
@@ -306,8 +317,26 @@ const processRecoResults = (results) => {
   return results
 }
 
+const getSubjects = (driver) => async (institution) => {
+  const session = driver.session()
+  return session.run(`
+    MATCH (s:Subject {institution: "${institution}"})
+    RETURN s
+  `)
+  .then(results => {
+    console.log("results: ", results.records);
+    
+    return results.records.map(s => s._fields[0].properties)
+  })
+  .catch(err => {
+    console.error("Error while querying db for subjects");
+    console.error(err)
+  })
+}
+
 module.exports = {
   initDB,
+  getUserSubjects,
   addUser,
   removeUser,
   addSubject,
@@ -316,5 +345,8 @@ module.exports = {
   userExists,
   subjectExists,
   addUserSubject,
-  removeUserSubject
+  removeUserSubject,
+  getSubjects,
+  userHasSubject,
+  userRelatedToSubject,
 }

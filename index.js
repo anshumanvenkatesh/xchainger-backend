@@ -2,6 +2,7 @@ const Hapi = require('@hapi/hapi');
 const Bell = require('@hapi/bell');
 const jwt = require('jsonwebtoken');
 var neo4j = require('neo4j-driver');
+const joi = require('joi')
 require('dotenv').config();
 
 const internal = require('./routes/internal')
@@ -32,7 +33,10 @@ const registerRoutes = async (server, session, driver) => {
     method: 'GET',
     path: '/ping',
     options: {
-      pre: [{method: utils.preEnsureUserExists, assign: 'ensureUser'}],
+      pre: [{
+        method: utils.preEnsureUserExists,
+        assign: 'ensureUser'
+      }],
       auth: 'jwt',
       handler: external.ping
     }
@@ -43,7 +47,7 @@ const registerRoutes = async (server, session, driver) => {
     path: '/internal/users/{email}',
     options: {
       // auth: 'jwt',
-      handler: internal.addUser(driver)
+      handler: internal.addUser
     }
   });
 
@@ -52,7 +56,7 @@ const registerRoutes = async (server, session, driver) => {
     path: '/internal/users/{email}',
     options: {
       // auth: 'jwt',
-      handler: internal.removeUser(driver)
+      handler: internal.removeUser
     }
   });
 
@@ -61,25 +65,25 @@ const registerRoutes = async (server, session, driver) => {
     path: '/internal/testreco',
     options: {
       // auth: 'jwt',
-      handler: internal.testReco(driver)
+      handler: internal.testReco
     }
   });
 
-  // server.route({
-  //   method: 'GET',
-  //   path: '/internal/subjects',
-  //   options: {
-  //     // auth: 'jwt',
-  //     handler: internal.getSubjects(driver)
-  //   }
-  // });
+  server.route({
+    method: 'GET',
+    path: '/subjects',
+    options: {
+      auth: 'jwt',
+      handler: external.getSubjects
+    }
+  });
 
   server.route({
     method: 'PUT',
     path: '/internal/subjects',
     options: {
       // auth: 'jwt',
-      handler: internal.addSubject(driver)
+      handler: internal.addSubject
     }
   });
 
@@ -88,7 +92,7 @@ const registerRoutes = async (server, session, driver) => {
     path: '/internal/subjects',
     options: {
       // auth: 'jwt',
-      handler: internal.removeSubject(driver)
+      handler: internal.removeSubject
     }
   });
 
@@ -103,10 +107,22 @@ const registerRoutes = async (server, session, driver) => {
 
   server.route({
     method: 'DELETE',
-    path: '/users'  ,
+    path: '/users',
     options: {
       auth: 'jwt',
       handler: external.removeUser
+    }
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/getUserSubjects',
+    options: {
+      auth: 'jwt',
+      pre: [
+        {method: utils.preCheckUserExists}
+      ],
+      handler: external.getUserSubjects
     }
   });
 
@@ -115,7 +131,14 @@ const registerRoutes = async (server, session, driver) => {
     path: '/addUserSubject',
     options: {
       auth: 'jwt',
-      handler: external.addUserSubject(driver)
+      validate: utils.validModifyUserSubject,
+      pre: [
+        {method: utils.preCheckInstitutionIntegrity}, 
+        {method: utils.preEnsureUserExists}, 
+        {method: utils.preCheckSubjectExists},
+        {method: utils.preCheckIsUserRelatedToSubject}
+      ],
+      handler: external.addUserSubject
     }
   });
 
@@ -124,7 +147,13 @@ const registerRoutes = async (server, session, driver) => {
     path: '/removeUserSubject',
     options: {
       auth: 'jwt',
-      handler: external.removeUserSubject(driver)
+      validate: utils.validModifyUserSubject,
+      pre: [
+        {method: utils.preCheckInstitutionIntegrity}, 
+        {method: utils.preEnsureUserExists}, 
+        {method: utils.preCheckSubjectExists},
+      ],
+      handler: external.removeUserSubject
     }
   });
 
@@ -133,18 +162,9 @@ const registerRoutes = async (server, session, driver) => {
     path: '/recos',
     options: {
       auth: 'jwt',
-      handler: external.getRecos(driver)
+      handler: external.getRecos
     }
   });
-
-  server.route({
-    method: ['GET', 'POST'], // Must handle both GET and POST
-    path: '/login', // The callback endpoint registered with the provider
-    options: {
-      auth: 'google',
-      handler: external.login(driver)
-    }
-  })
 }
 
 const init = async () => {
@@ -164,40 +184,27 @@ const init = async () => {
   await server.register(Bell);
   await server.register(require('hapi-auth-jwt2'))
 
-  server.auth.strategy('google', 'bell', {
-    provider: 'google',
-    password: 'cookie_encryption_password_secure',
-    clientId: GOOGLE_CLIENT_ID,
-    clientSecret: GOOGLE_CLIENT_SECRET,
-    isSecure: false // Terrible idea but required if not using HTTPS especially if developing locally
-  });
-
   server.auth.strategy('jwt', 'jwt', {
     // key: process.env.JWT_SECRET, // Never Share your secret key
-    verify: async (decoded, request) => { 
+    verify: async (decoded, request) => {
       const token = request.headers.authorization
       const _isValidUser = await utils.isValidUser(token)
       // console.log("_isValidUser: ", _isValidUser);
-      
+
       if (_isValidUser.isValidUser) {
         // console.log("request.app b4: ", request.server.app);
         const userDetails = await utils.getUserObject(_isValidUser.details)
         request.app.userDetails = userDetails
-        return {isValid: true, credentials: "try"}
+        return {
+          isValid: true,
+          credentials: "try"
+        }
       }
       return {
         isValid: false,
         credentials: "try"
       }
     },
-    // validate: async (decoded, request, h) => {
-    //   console.log("decoded in Bell validate: ", decoded);
-    //   const isValid = utils.isValidUser(decoded.msg)
-    //   return {
-    //     isValid
-    //   }
-      
-    // },  // validate function defined above
     verifyOptions: {
       algorithms: ["RS256"],
       ignoreExpiration: true
@@ -213,16 +220,12 @@ const init = async () => {
       console.log("MATCH QUERY executed successfully");
       // console.log("results: ", res);
       return
-
     })
     .then(() => dbutils.initDB(session))
     .catch(err => {
       console.log("\n\n Some error happened \n\n");
       console.error(err);
-
-
     })
-
 };
 
 
