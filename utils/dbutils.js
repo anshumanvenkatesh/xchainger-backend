@@ -198,7 +198,7 @@ const userExists = (driver) => async (userDetails) => {
   console.log("userDetails: ", userDetails);
   const { email } = userDetails
   const session = driver.session()
-  return session.run(`MATCH ${userNodePattern(email)} RETURN u`)
+  return session.run(`MATCH ${userNodePattern(userDetails)} RETURN u`)
     .then(results => {
       console.log("user exists: ", results.records);
       return (results.records.length !== 0)
@@ -218,7 +218,7 @@ const userRelationSubject = relation => driver => async (user, subject) => {
   return session.run(query)
     .then(results => results.records.length !== 0)
     .catch(err => {
-      console.error(`Error while checking if ${userDetails.email} wants ${subjectDetails.name}`)
+      console.error(`Error while checking if ${user.email} wants ${subject.name}`)
       console.error(err)
     })
 }

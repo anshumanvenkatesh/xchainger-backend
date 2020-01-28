@@ -32,6 +32,7 @@ const registerRoutes = async (server, session, driver) => {
     method: 'GET',
     path: '/ping',
     options: {
+      pre: [{method: utils.preEnsureUserExists, assign: 'ensureUser'}],
       auth: 'jwt',
       handler: external.ping
     }
@@ -158,6 +159,8 @@ const init = async () => {
     // host: 'localhost'
   });
 
+  server.app.driver = driver
+
   await server.register(Bell);
   await server.register(require('hapi-auth-jwt2'))
 
@@ -174,7 +177,12 @@ const init = async () => {
     verify: async (decoded, request) => { 
       const token = request.headers.authorization
       const _isValidUser = await utils.isValidUser(token)
-      if (_isValidUser) {
+      // console.log("_isValidUser: ", _isValidUser);
+      
+      if (_isValidUser.isValidUser) {
+        // console.log("request.app b4: ", request.server.app);
+        const userDetails = await utils.getUserObject(_isValidUser.details)
+        request.app.userDetails = userDetails
         return {isValid: true, credentials: "try"}
       }
       return {
