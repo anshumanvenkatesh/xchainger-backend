@@ -249,9 +249,9 @@ const subjectNodePattern = (subjectDetails) => `(s:Subject {
   name: "${subjectDetails.name}"
 })`
 
-const getRecos = (driver) => async (userDetails) => {
+const getRecos = (driver) => async (userEmail, courseSession) => {
   // const recoGetter = getReco(driver)(userDetails)
-  const recoGetter = getReco(driver)("a@asu.edu", "Spring 2020")
+  const recoGetter = getReco(driver)(userEmail, courseSession)
   return Promise.all([
     recoGetter(oneHopReco),
     recoGetter(twoHopReco),

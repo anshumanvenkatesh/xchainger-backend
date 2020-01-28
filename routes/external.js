@@ -49,13 +49,12 @@ const removeUserSubject = async (request, h) => {
 }
 
 const getRecos = async (request, h) => {
-  const decoded = jwt.verify(request.headers.authorization, process.env.JWT_SECRET)
-  console.log("header: ", decoded);
-  // const user = {
-  //   email: decoded.email,
-  //   institution: decoded.hd,
-  // }
-  return dbUtils.getRecos(request.server.app.driver)(decoded.email)
+  const { email } = request.app.userDetails
+  const session = request.query.session
+  console.log("email: ", email);
+  console.log("session: ", session);
+  
+  return dbUtils.getRecos(request.server.app.driver)(email, session)
 }
 
 const restricted = (request, h) => {
